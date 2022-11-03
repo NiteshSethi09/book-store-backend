@@ -1,0 +1,28 @@
+import express, { Request, Response } from "express";
+import mongoose from "mongoose";
+import dotenv from "dotenv";
+import cookieParser from "cookie-parser";
+
+import productRoutes from "./routes/product";
+import userRoutes from "./routes/user";
+import reviewRoutes from "./routes/review";
+
+dotenv.config();
+const app = express();
+
+app.use(express.urlencoded({ extended: false }));
+app.use(express.json());
+app.use(cookieParser());
+
+app.get("/", (req: Request, res: Response) => {
+  res.send("hello");
+});
+
+app.use("/product", productRoutes);
+app.use("/user", userRoutes);
+app.use("/review", reviewRoutes);
+
+mongoose
+  .connect(process.env.MONGOOSE_DB_URI!)
+  .then(() => app.listen(5000, () => console.log("Server is running.")))
+  .catch((e) => console.log("DB connection error:", e.message));
