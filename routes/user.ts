@@ -1,13 +1,22 @@
 import { Request, Response, Router } from "express";
 import { sign } from "jsonwebtoken";
 import bcrypt from "bcryptjs";
+import { ObjectIdSchemaDefinition } from "mongoose";
+import crypto from "crypto";
+import { validate } from "deep-email-validator";
+
 import parser, { CustomRequest } from "../utils/parser";
-import User, { validateUser } from "../model/user";
+import sendMail, { MailData } from "../utils/mail";
+import { signupMessage } from "../utils/messageConstants";
+import Order, { validateOrder } from "../model/order";
+import User, { Item, validateUser } from "../model/user";
 
 const router = Router();
 
 router.get("/get-user", parser, async (req: Request, res: Response) => {
-  const user = await User.findOne({ _id: (req as CustomRequest).user });
+  const user = await User.findOne({ _id: (req as CustomRequest).user }).select(
+    "-password"
+  );
 
   res.json({ error: false, user });
 });
@@ -21,17 +30,53 @@ router.post("/signup", async (req: Request, res: Response) => {
 
   let { name, email, password } = req.body;
 
+  const { valid, validators, reason } = await validate(email);
+
+  if (!valid) {
+    return res.json({
+      error: true,
+      message: validators[reason as keyof typeof validators]?.reason,
+    });
+  }
+
+  if (await User.findOne({ email })) {
+    return res.json({
+      error: true,
+      message: "Please make sure you are using the right Email.",
+    });
+  }
+
   const salt: string = await bcrypt.genSalt(+process.env.SALTROUND!);
   password = await bcrypt.hash(password, salt);
 
-  User.create({ name, email, password })
+  const verificationToken: string = crypto.randomBytes(128).toString("hex");
+
+  User.create({ name, email, password, verificationToken })
     .then(() =>
       res.json({ error: false, message: "User created successfully." })
     )
+    .then(() => {
+      const message = signupMessage(verificationToken);
+      const mailData: MailData = {
+        email,
+        message,
+        subject: "Please verify your account!",
+      };
+
+      sendMail(req, res, mailData);
+    })
     .catch((e) => res.json({ error: true, message: e.message }));
 });
 
 router.post("/login", async (req: Request, res: Response) => {
+  if (req.cookies["access_token"]) {
+    return res.json({
+      error: true,
+      message: "User is already logged in.",
+      token: req.cookies["access_token"],
+    });
+  }
+
   const { email, password } = req.body;
 
   const user = await User.findOne({ email });
@@ -60,6 +105,85 @@ router.post("/logout", parser, async (req: Request, res: Response) => {
   res.clearCookie("access_token");
 
   res.json({ error: false, message: "Token Removed" });
+});
+
+router.post("/add-to-cart", parser, async (req: Request, res: Response) => {
+  const { id: productId } = req.body;
+
+  try {
+    const user = await User.findOne({ _id: (req as CustomRequest).user });
+    const updatedCartItems: Item[] = [...user?.cart.items!];
+    let newQuantity = 1;
+
+    const itemIndex: number = user?.cart.items.findIndex(
+      (item) => item.productId.toString() === productId.toString()
+    )!;
+
+    if (itemIndex >= 0) {
+      newQuantity = user?.cart.items[itemIndex].quantity! + 1;
+      updatedCartItems[itemIndex].quantity = newQuantity;
+    } else {
+      updatedCartItems.push({
+        productId,
+        quantity: 1,
+      });
+    }
+    user!.cart.items = updatedCartItems;
+    await user?.save();
+
+    res.json({ error: false, message: user });
+  } catch (e) {
+    return res.json({ error: true, message: e });
+  }
+});
+
+router.post("/place-order", parser, async (req: Request, res: Response) => {
+  try {
+    const user = await User.findOne({ _id: (req as CustomRequest).user });
+    if (user?.cart.items.length! === 0) {
+      return res.json({
+        error: true,
+        message:
+          "Oops! There is no item in cart. Can't place order with empty cart.",
+      });
+    }
+
+    user
+      ?.populate("cart.items.productId")
+      .then((user) => {
+        const items = user.cart.items.map((item) => ({
+          product: { ...(item.productId as any)._doc }, //this needs to be reviewed
+          quantity: item.quantity,
+        }));
+
+        const newOrder = {
+          items,
+          user: {
+            name: user.name,
+            userId: user._id as unknown as ObjectIdSchemaDefinition, //this needs to be reviewed
+          },
+        };
+
+        const errorMessage = validateOrder(newOrder);
+
+        if (errorMessage) {
+          return res.json({ error: true, message: errorMessage });
+        }
+
+        Order.create(newOrder)
+          .then(() => {
+            user.cart.items = [];
+            user.save();
+          })
+          .then(() =>
+            res.json({ error: false, message: "Order created successfully!" })
+          )
+          .catch((e) => res.json({ error: true, message: e.message }));
+      })
+      .catch((e) => res.json({ error: true, message: e.message }));
+  } catch (e) {
+    res.json({ error: true, message: "Error while placing an order!" });
+  }
 });
 
 export default router;

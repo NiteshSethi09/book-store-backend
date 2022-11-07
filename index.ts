@@ -2,6 +2,7 @@ import express, { Request, Response } from "express";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
+import { portNumber } from "./utils/config";
 
 import productRoutes from "./routes/product";
 import userRoutes from "./routes/user";
@@ -24,5 +25,5 @@ app.use("/review", reviewRoutes);
 
 mongoose
   .connect(process.env.MONGOOSE_DB_URI!)
-  .then(() => app.listen(5000, () => console.log("Server is running.")))
+  .then(() => app.listen(portNumber, () => console.log("Server is running.")))
   .catch((e) => console.log("DB connection error:", e.message));
