@@ -12,7 +12,9 @@ interface User {
   password: string;
   cart: { items: Array<Item> };
   verified: boolean;
-  verificationToken: string;
+  verificationToken: string | undefined;
+  resetToken: string | undefined;
+  resetTokenExpiration: Date | undefined;
 }
 
 const userSchema: Schema<User> = new Schema<User>({
@@ -49,6 +51,8 @@ const userSchema: Schema<User> = new Schema<User>({
     default: false,
   },
   verificationToken: String,
+  resetToken: String,
+  resetTokenExpiration: Date,
 });
 
 export function validateUser(

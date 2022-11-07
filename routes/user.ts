@@ -7,7 +7,7 @@ import { validate } from "deep-email-validator";
 
 import parser, { CustomRequest } from "../utils/parser";
 import sendMail, { MailData } from "../utils/mail";
-import { signupMessage } from "../utils/messageConstants";
+import { resetPasswordMessage, signupMessage } from "../utils/messageConstants";
 import Order, { validateOrder } from "../model/order";
 import User, { Item, validateUser } from "../model/user";
 
@@ -63,7 +63,7 @@ router.post("/signup", async (req: Request, res: Response) => {
         subject: "Please verify your account!",
       };
 
-      sendMail(req, res, mailData);
+      sendMail(mailData);
     })
     .catch((e) => res.json({ error: true, message: e.message }));
 });
@@ -99,6 +99,103 @@ router.post("/login", async (req: Request, res: Response) => {
       message: "User not found. Please check the credentials.",
     });
   }
+});
+
+router.post("/verify-account/:token", async (req: Request, res: Response) => {
+  const { token } = req.params;
+
+  const user = await User.findOne({ verificationToken: token });
+  if (!user) {
+    return res.json({
+      error: true,
+      message: "Either the user is verified or trying with wrong token.",
+    });
+  }
+
+  user!.verified = true;
+  user.verificationToken = undefined;
+  await user.save();
+  res.json({ error: false, message: "User verified successfully!" });
+});
+
+router.post("/reset-password", async (req: Request, res: Response) => {
+  const { email } = req.body;
+
+  if (!email) {
+    return res.json({
+      error: true,
+      message: "Please provide the email.",
+    });
+  }
+
+  const { valid, validators, reason } = await validate(email);
+
+  if (!valid) {
+    return res.json({
+      error: true,
+      message: validators[reason as keyof typeof validators]?.reason,
+    });
+  }
+
+  const user = await User.findOne({ email });
+
+  if (!user) {
+    return res.json({
+      error: true,
+      message: "Invalid Email.",
+    });
+  }
+  const resetToken: string = crypto.randomBytes(128).toString("hex");
+
+  user.resetToken = resetToken;
+  user.resetTokenExpiration = new Date(Date.now() + 3600000);
+
+  await user.save();
+
+  res.json({ error: false, message: "mail has been send to your email." });
+
+  const message = resetPasswordMessage(resetToken);
+  const mailData: MailData = {
+    email,
+    message,
+    subject: "Reset Password!",
+  };
+
+  sendMail(mailData);
+});
+
+router.post("/reset-password/:token", async (req: Request, res: Response) => {
+  const { token } = req.params;
+  let { password } = req.body;
+
+  if (!password) {
+    return res.json({
+      error: true,
+      message: "Please provide the password.",
+    });
+  }
+
+  const user = await User.findOne({
+    resetToken: token,
+    resetTokenExpiration: { $gt: Date.now() },
+  });
+
+  if (!user) {
+    return res.json({
+      error: true,
+      message: "Time expired. Please reset the password again.",
+    });
+  }
+
+  const salt: string = await bcrypt.genSalt(+process.env.SALTROUND!);
+  password = await bcrypt.hash(password, salt);
+
+  user.password = password;
+  user.resetToken = undefined;
+  user.resetTokenExpiration = undefined;
+  await user.save();
+
+  res.json({ error: false, message: "Password reset successfully!" });
 });
 
 router.post("/logout", parser, async (req: Request, res: Response) => {

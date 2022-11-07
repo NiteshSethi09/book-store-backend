@@ -1,4 +1,3 @@
-import { Request, Response } from "express";
 import { createTransport } from "nodemailer";
 import { passwordNodemailer, userEmailNodemailer } from "./config";
 
@@ -8,7 +7,7 @@ export interface MailData {
   subject: string;
 }
 
-const sendMail = function (req: Request, res: Response, data: MailData) {
+const sendMail = function (data: MailData) {
   createTransport({
     host: "smtp.gmail.com",
     service: "gmail",
@@ -18,7 +17,7 @@ const sendMail = function (req: Request, res: Response, data: MailData) {
     },
   })
     .sendMail({
-      from: userEmailNodemailer, // sender address
+      from: `Book Store <${userEmailNodemailer}>`, // sender address
       to: data.email, // list of receivers
       subject: data.subject, // Subject line
       html: data.message, // html body
