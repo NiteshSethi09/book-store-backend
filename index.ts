@@ -2,6 +2,7 @@ import express, { Request, Response } from "express";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
+import cors from "cors";
 import { portNumber } from "./utils/config";
 
 import productRoutes from "./routes/product";
@@ -14,6 +15,7 @@ const app = express();
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 app.use(cookieParser());
+app.use(cors());
 
 app.get("/", (req: Request, res: Response) => {
   res.send("hello");

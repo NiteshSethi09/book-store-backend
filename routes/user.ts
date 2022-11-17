@@ -1,5 +1,4 @@
 import { Request, Response, Router } from "express";
-import { sign } from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import { ObjectIdSchemaDefinition } from "mongoose";
 import crypto from "crypto";
@@ -9,11 +8,11 @@ import parser, { CustomRequest } from "../utils/parser";
 import sendMail, { MailData } from "../utils/mail";
 import { resetPasswordMessage, signupMessage } from "../utils/messageConstants";
 import Order, { validateOrder } from "../model/order";
-import User, { Item, validateUser } from "../model/user";
+import User, { validateUser } from "../model/user";
 
 const router = Router();
 
-router.get("/get-user", parser, async (req: Request, res: Response) => {
+router.get("/get-user", async (req: Request, res: Response) => {
   const user = await User.findOne({ _id: (req as CustomRequest).user }).select(
     "-password"
   );
@@ -69,14 +68,6 @@ router.post("/signup", async (req: Request, res: Response) => {
 });
 
 router.post("/login", async (req: Request, res: Response) => {
-  if (req.cookies["access_token"]) {
-    return res.json({
-      error: true,
-      message: "User is already logged in.",
-      token: req.cookies["access_token"],
-    });
-  }
-
   const { email, password } = req.body;
 
   const user = await User.findOne({ email });
@@ -87,12 +78,17 @@ router.post("/login", async (req: Request, res: Response) => {
     });
   }
 
-  const token = sign({ _id: user._id }, process.env.JWT_PRIVATEKEY!);
-
   if (await bcrypt.compare(password, user.password)) {
-    res
-      .cookie("access_token", token)
-      .json({ error: false, message: "User found", token });
+    res.json({
+      error: false,
+      message: "User found",
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        verified: user.verified,
+      },
+    });
   } else {
     res.json({
       error: true,
@@ -198,42 +194,7 @@ router.post("/reset-password/:token", async (req: Request, res: Response) => {
   res.json({ error: false, message: "Password reset successfully!" });
 });
 
-router.post("/logout", parser, async (req: Request, res: Response) => {
-  res.clearCookie("access_token");
-
-  res.json({ error: false, message: "Token Removed" });
-});
-
-router.post("/add-to-cart", parser, async (req: Request, res: Response) => {
-  const { id: productId } = req.body;
-
-  try {
-    const user = await User.findOne({ _id: (req as CustomRequest).user });
-    const updatedCartItems: Item[] = [...user?.cart.items!];
-    let newQuantity = 1;
-
-    const itemIndex: number = user?.cart.items.findIndex(
-      (item) => item.productId.toString() === productId.toString()
-    )!;
-
-    if (itemIndex >= 0) {
-      newQuantity = user?.cart.items[itemIndex].quantity! + 1;
-      updatedCartItems[itemIndex].quantity = newQuantity;
-    } else {
-      updatedCartItems.push({
-        productId,
-        quantity: 1,
-      });
-    }
-    user!.cart.items = updatedCartItems;
-    await user?.save();
-
-    res.json({ error: false, message: user });
-  } catch (e) {
-    return res.json({ error: true, message: e });
-  }
-});
-
+// Since add-to-cart route has been removed, below route needs to be fixed by latest functionality.
 router.post("/place-order", parser, async (req: Request, res: Response) => {
   try {
     const user = await User.findOne({ _id: (req as CustomRequest).user });

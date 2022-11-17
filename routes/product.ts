@@ -6,12 +6,12 @@ import { validateId } from "../model/common";
 const router = Router();
 
 router.get("/get-products", async (req: Request, res: Response) => {
-  const data = await Product.find();
+  const data = await Product.find().select("-createdAt -updatedAt -__v");
 
   res.json(data);
 });
 
-router.get("/get-by-id", async (req: Request, res: Response) => {
+router.post("/get-by-id", async (req: Request, res: Response) => {
   const { id } = req.body;
   if (!validateId(id)) {
     return res.json({
@@ -20,7 +20,7 @@ router.get("/get-by-id", async (req: Request, res: Response) => {
     });
   }
 
-  const data = await Product.findById(id);
+  const data = await Product.findById(id).select("-createdAt -updatedAt -__v");
   res.json({ error: false, data });
 });
 
