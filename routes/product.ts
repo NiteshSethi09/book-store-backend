@@ -1,5 +1,4 @@
 import { Request, Response, Router } from "express";
-import parser from "../utils/parser";
 import Product, { validateProduct } from "../model/product";
 import { validateId } from "../model/common";
 
@@ -24,7 +23,7 @@ router.post("/get-by-id", async (req: Request, res: Response) => {
   res.json({ error: false, data });
 });
 
-router.post("/create", parser, async (req: Request, res: Response) => {
+router.post("/create", async (req: Request, res: Response) => {
   const errorMessage = validateProduct(req.body);
 
   if (errorMessage) {
@@ -53,7 +52,7 @@ router.post("/create", parser, async (req: Request, res: Response) => {
     .catch((e) => res.json({ error: true, message: e.message }));
 });
 
-router.delete("/delete-by-id", parser, (req: Request, res: Response) => {
+router.delete("/delete-by-id", (req: Request, res: Response) => {
   const { id } = req.body;
 
   if (!validateId(id)) {

@@ -1,5 +1,4 @@
 import { Request, Response, Router } from "express";
-import parser from "../utils/parser";
 import Review, { validateReview } from "../model/review";
 import { validateId } from "../model/common";
 
@@ -25,7 +24,7 @@ router.get("/get-review-by-id", async (req: Request, res: Response) => {
   res.json({ review });
 });
 
-router.post("/create-review", parser, (req: Request, res: Response) => {
+router.post("/create-review", (req: Request, res: Response) => {
   const errorMessage = validateReview(req.body);
 
   if (errorMessage) {

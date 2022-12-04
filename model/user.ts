@@ -1,16 +1,10 @@
 import Joi from "joi";
-import { model, ObjectIdSchemaDefinition, Schema, Types } from "mongoose";
-
-export interface Item {
-  productId: ObjectIdSchemaDefinition;
-  quantity: number;
-}
+import { model, Schema } from "mongoose";
 
 interface User {
   name: string;
   email: string;
   password: string;
-  cart: { items: Array<Item> };
   verified: boolean;
   verificationToken: string | undefined;
   resetToken: string | undefined;
@@ -31,21 +25,6 @@ const userSchema: Schema<User> = new Schema<User>({
     type: String,
     required: true,
   },
-  cart: {
-    items: [
-      {
-        productId: {
-          type: Types.ObjectId,
-          ref: "Product",
-          required: true,
-        },
-        quantity: {
-          type: Number,
-          required: true,
-        },
-      },
-    ],
-  },
   verified: {
     type: Boolean,
     default: false,
@@ -62,15 +41,6 @@ export function validateUser(
     email: Joi.string().email().required(),
     name: Joi.string().required(),
     password: Joi.string().required(),
-    cart: Joi.object({
-      items: Joi.array().items(
-        Joi.object<Item>({
-          // (should accept a mongoose type objectId) needs to be reviewed, error prone
-          productId: Joi.string().required(),
-          quantity: Joi.number().required(),
-        })
-      ),
-    }),
   }).validate(object);
 
   if (error) return error.details;

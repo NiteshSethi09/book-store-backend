@@ -8,7 +8,7 @@ const Category: string[] = [
   "Career Development",
 ];
 
-interface Product {
+export interface Product {
   title: string;
   imageUrl: string;
   description: string;

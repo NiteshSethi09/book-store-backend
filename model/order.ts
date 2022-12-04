@@ -1,12 +1,19 @@
 import Joi from "joi";
 import { model, ObjectIdSchemaDefinition, Schema, Types } from "mongoose";
 
+export interface Item {
+  product: object;
+  quantity: number;
+}
+
 interface Order {
-  items: { product: object; quantity: number }[];
+  items: Item[];
   user: {
     name: string;
     userId: ObjectIdSchemaDefinition;
   };
+  orderPlacedDate?: Date;
+  totalAmount?: number;
 }
 
 const orderSchema: Schema<Order> = new Schema<Order>({
@@ -33,17 +40,23 @@ const orderSchema: Schema<Order> = new Schema<Order>({
       required: true,
     },
   },
+  orderPlacedDate: {
+    type: Date,
+    default: Date.now(),
+  },
+  totalAmount: {
+    type: Number,
+    required: true,
+  },
 });
 
-export function validateOrder(
-  object: Order
-): Joi.ValidationErrorItem[] | undefined {
+export function validateOrder(object: Order): string | undefined {
   const { error } = Joi.object<Order>({
     items: Joi.array()
       .items(
         Joi.object({
           product: Joi.object().required(),
-          quantity: Joi.number().required(),
+          quantity: Joi.number().required().max(5),
         })
       )
       .required()
@@ -55,7 +68,7 @@ export function validateOrder(
     }),
   }).validate(object);
 
-  if (error) return error.details;
+  if (error) return error.details[0].message;
 }
 
 export default model<Order>("Order", orderSchema);

@@ -1,24 +1,15 @@
 import { Request, Response, Router } from "express";
 import bcrypt from "bcryptjs";
-import { ObjectIdSchemaDefinition } from "mongoose";
 import crypto from "crypto";
 import { validate } from "deep-email-validator";
 
-import parser, { CustomRequest } from "../utils/parser";
 import sendMail, { MailData } from "../utils/mail";
 import { resetPasswordMessage, signupMessage } from "../utils/messageConstants";
-import Order, { validateOrder } from "../model/order";
+import Order, { Item, validateOrder } from "../model/order";
 import User, { validateUser } from "../model/user";
+import { Product } from "../model/product";
 
 const router = Router();
-
-router.get("/get-user", async (req: Request, res: Response) => {
-  const user = await User.findOne({ _id: (req as CustomRequest).user }).select(
-    "-password"
-  );
-
-  res.json({ error: false, user });
-});
 
 router.post("/signup", async (req: Request, res: Response) => {
   const errorMessage = validateUser(req.body);
@@ -194,50 +185,26 @@ router.post("/reset-password/:token", async (req: Request, res: Response) => {
   res.json({ error: false, message: "Password reset successfully!" });
 });
 
-// Since add-to-cart route has been removed, below route needs to be fixed by latest functionality.
-router.post("/place-order", parser, async (req: Request, res: Response) => {
+router.post("/place-order", async (req: Request, res: Response) => {
   try {
-    const user = await User.findOne({ _id: (req as CustomRequest).user });
-    if (user?.cart.items.length! === 0) {
-      return res.json({
-        error: true,
-        message:
-          "Oops! There is no item in cart. Can't place order with empty cart.",
-      });
+    const { items, user } = req.body;
+    const errorMessage = validateOrder({ items, user });
+
+    if (errorMessage) {
+      return res.json({ error: true, message: errorMessage });
     }
 
-    user
-      ?.populate("cart.items.productId")
-      .then((user) => {
-        const items = user.cart.items.map((item) => ({
-          product: { ...(item.productId as any)._doc }, //this needs to be reviewed
-          quantity: item.quantity,
-        }));
+    let totalAmount: number = 0;
+    (items as Item[]).forEach((item: Item) => {
+      const price = (item.product as Product).price.offerPrice;
+      const quantyity = item.quantity;
+      totalAmount += price * quantyity;
+    });
 
-        const newOrder = {
-          items,
-          user: {
-            name: user.name,
-            userId: user._id as unknown as ObjectIdSchemaDefinition, //this needs to be reviewed
-          },
-        };
-
-        const errorMessage = validateOrder(newOrder);
-
-        if (errorMessage) {
-          return res.json({ error: true, message: errorMessage });
-        }
-
-        Order.create(newOrder)
-          .then(() => {
-            user.cart.items = [];
-            user.save();
-          })
-          .then(() =>
-            res.json({ error: false, message: "Order created successfully!" })
-          )
-          .catch((e) => res.json({ error: true, message: e.message }));
-      })
+    Order.create({ items, user, totalAmount })
+      .then(() =>
+        res.json({ error: false, message: "Order created successfully." })
+      )
       .catch((e) => res.json({ error: true, message: e.message }));
   } catch (e) {
     res.json({ error: true, message: "Error while placing an order!" });
