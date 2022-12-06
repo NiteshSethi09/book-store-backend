@@ -53,9 +53,7 @@ const productSchema: Schema<Product> = new Schema<Product>(
   { timestamps: true }
 );
 
-export function validateProduct(
-  object: Product
-): Joi.ValidationErrorItem[] | undefined {
+export function validateProduct(object: Product): string | undefined {
   const { error } = Joi.object<Product>({
     title: Joi.string().required(),
     description: Joi.string().required(),
@@ -70,7 +68,7 @@ export function validateProduct(
       .required(),
   }).validate(object);
 
-  if (error) return error.details;
+  if (error) return error.details[0].message;
 }
 
 export default model<Product>("Product", productSchema);

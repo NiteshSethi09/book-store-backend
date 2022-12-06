@@ -25,9 +25,7 @@ const reviewSchema: Schema<Review> = new Schema<Review>(
   { timestamps: true }
 );
 
-export function validateReview(
-  object: Review
-): Joi.ValidationErrorItem[] | undefined {
+export function validateReview(object: Review): string | undefined {
   const { error } = Joi.object<Review>({
     reviewDescription: Joi.string().required(),
     // (should accept a mongoose type objectId) needs to be reviewed, error prone
@@ -36,7 +34,7 @@ export function validateReview(
     reviewOfProduct: Joi.string(),
   }).validate(object);
 
-  if (error) return error.details;
+  if (error) return error.details[0].message;
 }
 
 export default model<Review>("Review", reviewSchema);

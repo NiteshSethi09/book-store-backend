@@ -34,16 +34,14 @@ const userSchema: Schema<User> = new Schema<User>({
   resetTokenExpiration: Date,
 });
 
-export function validateUser(
-  object: User
-): Joi.ValidationErrorItem[] | undefined {
+export function validateUser(object: User): string | undefined {
   const { error } = Joi.object<User>({
     email: Joi.string().email().required(),
     name: Joi.string().required(),
     password: Joi.string().required(),
   }).validate(object);
 
-  if (error) return error.details;
+  if (error) return error.details[0].message;
 }
 
 export default model<User>("User", userSchema);

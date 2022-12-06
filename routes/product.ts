@@ -24,7 +24,7 @@ router.post("/get-by-id", async (req: Request, res: Response) => {
 });
 
 router.post("/create", async (req: Request, res: Response) => {
-  const errorMessage = validateProduct(req.body);
+  const errorMessage: string = validateProduct(req.body)!;
 
   if (errorMessage) {
     return res.json({ error: true, message: errorMessage });
