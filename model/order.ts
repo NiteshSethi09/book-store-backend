@@ -6,6 +6,15 @@ export interface Item {
   quantity: number;
 }
 
+export interface OrderDetails {
+  order_id: string;
+  totalAmount: number;
+  currency: string;
+  upi_transaction_id?: string;
+  email?: string;
+  method?: string;
+}
+
 interface Order {
   items: Item[];
   user: {
@@ -13,7 +22,7 @@ interface Order {
     userId: ObjectIdSchemaDefinition;
   };
   orderPlacedDate?: Date;
-  totalAmount?: number;
+  orderDetails?: OrderDetails;
 }
 
 const orderSchema: Schema<Order> = new Schema<Order>({
@@ -44,9 +53,31 @@ const orderSchema: Schema<Order> = new Schema<Order>({
     type: Date,
     default: Date.now(),
   },
-  totalAmount: {
-    type: Number,
-    required: true,
+  orderDetails: {
+    order_id: {
+      type: String,
+      required: true,
+    },
+    totalAmount: {
+      type: Number,
+      required: true,
+    },
+    currency: {
+      type: String,
+      required: true,
+    },
+    upi_transaction_id: {
+      type: String,
+      required: false,
+    },
+    email: {
+      type: String,
+      required: false,
+    },
+    method: {
+      type: String,
+      required: false,
+    },
   },
 });
 

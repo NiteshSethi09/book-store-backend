@@ -7,6 +7,7 @@ import { portNumber } from "./utils/config";
 import productRoutes from "./routes/product";
 import userRoutes from "./routes/user";
 import reviewRoutes from "./routes/review";
+import razorpayRoutes from "./routes/razorpay";
 
 dotenv.config();
 const app = express();
@@ -22,6 +23,7 @@ app.get("/", (req: Request, res: Response) => {
 app.use("/product", productRoutes);
 app.use("/user", userRoutes);
 app.use("/review", reviewRoutes);
+app.use("/razorpay", razorpayRoutes);
 
 mongoose
   .connect(process.env.MONGOOSE_DB_URI!)

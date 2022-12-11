@@ -5,9 +5,7 @@ import { validate } from "deep-email-validator";
 
 import sendMail, { MailData } from "../utils/mail";
 import { resetPasswordMessage, signupMessage } from "../utils/messageConstants";
-import Order, { Item, validateOrder } from "../model/order";
 import User, { validateUser } from "../model/user";
-import { Product } from "../model/product";
 
 const router = Router();
 
@@ -183,32 +181,6 @@ router.post("/reset-password/:token", async (req: Request, res: Response) => {
   await user.save();
 
   res.json({ error: false, message: "Password reset successfully!" });
-});
-
-router.post("/place-order", async (req: Request, res: Response) => {
-  try {
-    const { items, user } = req.body;
-    const errorMessage = validateOrder({ items, user });
-
-    if (errorMessage) {
-      return res.json({ error: true, message: errorMessage });
-    }
-
-    let totalAmount: number = 0;
-    (items as Item[]).forEach((item: Item) => {
-      const price = (item.product as Product).price.offerPrice;
-      const quantyity = item.quantity;
-      totalAmount += price * quantyity;
-    });
-
-    Order.create({ items, user, totalAmount })
-      .then(() =>
-        res.json({ error: false, message: "Order created successfully." })
-      )
-      .catch((e) => res.json({ error: true, message: e.message }));
-  } catch (e) {
-    res.json({ error: true, message: "Error while placing an order!" });
-  }
 });
 
 export default router;
