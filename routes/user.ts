@@ -27,13 +27,6 @@ router.post("/signup", async (req: Request, res: Response) => {
     });
   }
 
-  if (await User.findOne({ email })) {
-    return res.json({
-      error: true,
-      message: "Please make sure you are using the right Email.",
-    });
-  }
-
   const salt: string = await bcrypt.genSalt(+process.env.SALTROUND!);
   password = await bcrypt.hash(password, salt);
 
@@ -53,7 +46,13 @@ router.post("/signup", async (req: Request, res: Response) => {
 
       sendMail(mailData);
     })
-    .catch((e) => res.json({ error: true, message: e.message }));
+    .catch((e) =>
+      res.json({
+        error: true,
+        message:
+          "Error while signing up. Please make sure you are using the right Email.",
+      })
+    );
 });
 
 router.post("/login", async (req: Request, res: Response) => {
@@ -89,29 +88,16 @@ router.post("/login", async (req: Request, res: Response) => {
 router.post("/verify-account/:token", async (req: Request, res: Response) => {
   const { token } = req.params;
 
-  const user = await User.findOne({ verificationToken: token });
-  if (!user) {
-    return res.json({
-      error: true,
-      message: "Either the user is verified or trying with wrong token.",
-    });
-  }
+  await User.findOneAndUpdate(
+    { verificationToken: token },
+    { verified: true, verificationToken: undefined }
+  );
 
-  user!.verified = true;
-  user.verificationToken = undefined;
-  await user.save();
   res.json({ error: false, message: "User verified successfully!" });
 });
 
 router.post("/reset-password", async (req: Request, res: Response) => {
   const { email } = req.body;
-
-  if (!email) {
-    return res.json({
-      error: true,
-      message: "Please provide the email.",
-    });
-  }
 
   const { valid, validators, reason } = await validate(email);
 
@@ -122,20 +108,12 @@ router.post("/reset-password", async (req: Request, res: Response) => {
     });
   }
 
-  const user = await User.findOne({ email });
-
-  if (!user) {
-    return res.json({
-      error: true,
-      message: "Invalid Email.",
-    });
-  }
   const resetToken: string = crypto.randomBytes(128).toString("hex");
 
-  user.resetToken = resetToken;
-  user.resetTokenExpiration = new Date(Date.now() + 3600000);
-
-  await user.save();
+  await User.findOneAndUpdate(
+    { email },
+    { resetToken, resetTokenExpiration: new Date(Date.now() + 3600000) }
+  );
 
   res.json({ error: false, message: "mail has been send to your email." });
 
@@ -160,25 +138,16 @@ router.post("/reset-password/:token", async (req: Request, res: Response) => {
     });
   }
 
-  const user = await User.findOne({
-    resetToken: token,
-    resetTokenExpiration: { $gt: Date.now() },
-  });
-
-  if (!user) {
-    return res.json({
-      error: true,
-      message: "Time expired. Please reset the password again.",
-    });
-  }
-
   const salt: string = await bcrypt.genSalt(+process.env.SALTROUND!);
   password = await bcrypt.hash(password, salt);
 
-  user.password = password;
-  user.resetToken = undefined;
-  user.resetTokenExpiration = undefined;
-  await user.save();
+  await User.findOneAndUpdate(
+    {
+      resetToken: token,
+      resetTokenExpiration: { $gt: Date.now() },
+    },
+    { password, resetToken: undefined, resetTokenExpiration: undefined }
+  );
 
   res.json({ error: false, message: "Password reset successfully!" });
 });
