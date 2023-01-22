@@ -1,7 +1,6 @@
 import { Request, Response, Router } from "express";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
-import { validate } from "deep-email-validator";
 
 import sendMail, { MailData } from "../utils/mail";
 import { resetPasswordMessage, signupMessage } from "../utils/messageConstants";
@@ -17,15 +16,6 @@ router.post("/signup", async (req: Request, res: Response) => {
   }
 
   let { name, email, password } = req.body;
-
-  const { valid, validators, reason } = await validate(email);
-
-  if (!valid) {
-    return res.json({
-      error: true,
-      message: validators[reason as keyof typeof validators]?.reason,
-    });
-  }
 
   const salt: string = await bcrypt.genSalt(+process.env.SALTROUND!);
   password = await bcrypt.hash(password, salt);
@@ -86,27 +76,28 @@ router.post("/login", async (req: Request, res: Response) => {
 });
 
 router.post("/verify-account/:token", async (req: Request, res: Response) => {
-  const { token } = req.params;
+  try {
+    const { token } = req.params;
 
-  await User.findOneAndUpdate(
-    { verificationToken: token },
-    { verified: true, verificationToken: undefined }
-  );
+    const user = await User.findOne({ verificationToken: token });
 
-  res.json({ error: false, message: "User verified successfully!" });
+    user!.verified = true;
+    user!.verificationToken = undefined;
+
+    await user!.save();
+
+    res.json({ error: false, message: "User verified successfully!" });
+  } catch (error) {
+    res.json({
+      error: true,
+      message:
+        "The user may already be verified, please check, or we are unable to proceed right now.",
+    });
+  }
 });
 
 router.post("/reset-password", async (req: Request, res: Response) => {
   const { email } = req.body;
-
-  const { valid, validators, reason } = await validate(email);
-
-  if (!valid) {
-    return res.json({
-      error: true,
-      message: validators[reason as keyof typeof validators]?.reason,
-    });
-  }
 
   const resetToken: string = crypto.randomBytes(128).toString("hex");
 
@@ -128,28 +119,39 @@ router.post("/reset-password", async (req: Request, res: Response) => {
 });
 
 router.post("/reset-password/:token", async (req: Request, res: Response) => {
-  const { token } = req.params;
-  let { password } = req.body;
+  try {
+    const { token } = req.params;
+    let { password } = req.body;
 
-  if (!password) {
-    return res.json({
-      error: true,
-      message: "Please provide the password.",
-    });
-  }
+    if (!password) {
+      return res.json({
+        error: true,
+        message: "Please provide the password.",
+      });
+    }
 
-  const salt: string = await bcrypt.genSalt(+process.env.SALTROUND!);
-  password = await bcrypt.hash(password, salt);
+    const salt: string = await bcrypt.genSalt(+process.env.SALTROUND!);
+    password = await bcrypt.hash(password, salt);
 
-  await User.findOneAndUpdate(
-    {
+    const user = await User.findOne({
       resetToken: token,
       resetTokenExpiration: { $gt: Date.now() },
-    },
-    { password, resetToken: undefined, resetTokenExpiration: undefined }
-  );
+    });
 
-  res.json({ error: false, message: "Password reset successfully!" });
+    user!.password = password;
+    user!.resetToken = undefined;
+    user!.resetTokenExpiration = undefined;
+
+    await user!.save();
+
+    res.json({ error: false, message: "Password reset successfully!" });
+  } catch (error) {
+    res.json({
+      error: true,
+      message:
+        "Maybe the request is already fulfilled before or we are unable to proceed right now.",
+    });
+  }
 });
 
 export default router;

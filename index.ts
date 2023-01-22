@@ -25,6 +25,7 @@ app.use("/user", userRoutes);
 app.use("/review", reviewRoutes);
 app.use("/razorpay", razorpayRoutes);
 
+mongoose.set("strictQuery", false);
 mongoose
   .connect(process.env.MONGOOSE_DB_URI!)
   .then(() => app.listen(portNumber, () => console.log("Server is running.")))
