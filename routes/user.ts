@@ -23,9 +23,6 @@ router.post("/signup", async (req: Request, res: Response) => {
   const verificationToken: string = crypto.randomBytes(128).toString("hex");
 
   User.create({ name, email, password, verificationToken })
-    .then(() =>
-      res.json({ error: false, message: "User created successfully." })
-    )
     .then(() => {
       const message = signupMessage(verificationToken);
       const mailData: MailData = {
@@ -33,9 +30,12 @@ router.post("/signup", async (req: Request, res: Response) => {
         message,
         subject: "Please verify your account!",
       };
-
-      sendMail(mailData);
+      return mailData;
     })
+    .then((mailData) => sendMail(mailData))
+    .then(() =>
+      res.json({ error: false, message: "User created successfully." })
+    )
     .catch((e) =>
       res.json({
         error: true,
@@ -106,8 +106,6 @@ router.post("/reset-password", async (req: Request, res: Response) => {
     { resetToken, resetTokenExpiration: new Date(Date.now() + 3600000) }
   );
 
-  res.json({ error: false, message: "mail has been send to your email." });
-
   const message = resetPasswordMessage(resetToken);
   const mailData: MailData = {
     email,
@@ -115,7 +113,8 @@ router.post("/reset-password", async (req: Request, res: Response) => {
     subject: "Reset Password!",
   };
 
-  sendMail(mailData);
+  await sendMail(mailData);
+  res.json({ error: false, message: "mail has been send to your email." });
 });
 
 router.post("/reset-password/:token", async (req: Request, res: Response) => {

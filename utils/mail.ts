@@ -7,26 +7,27 @@ export interface MailData {
   subject: string;
 }
 
-const sendMail = function (data: MailData) {
-  createTransport({
-    host: "smtp.gmail.com",
-    service: "gmail",
-    auth: {
-      user: userEmailNodemailer,
-      pass: passwordNodemailer,
-    },
-  })
-    .sendMail({
+const emailTransporter = createTransport({
+  host: "smtp.gmail.com",
+  service: "gmail",
+  auth: {
+    user: userEmailNodemailer,
+    pass: passwordNodemailer,
+  },
+});
+
+const sendMail = async function (data: MailData) {
+  try {
+    await emailTransporter.sendMail({
       from: `Book Store <${userEmailNodemailer}>`, // sender address
       to: data.email, // list of receivers
       subject: data.subject, // Subject line
       html: data.message, // html body
-    })
-    .then(() => console.log("Message sent successfully!"))
-    .catch((e) => {
-      console.log("Nodemailer Error:", e.message);
-      return new Error(e.message);
     });
+  } catch (e: any) {
+    console.log("Nodemailer Error:", e.message);
+    return new Error(e.message);
+  }
 };
 
 export default sendMail;
