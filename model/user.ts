@@ -9,6 +9,7 @@ interface User {
   verificationToken: string | undefined;
   resetToken: string | undefined;
   resetTokenExpiration: Date | undefined;
+  role: "USER" | "ADMIN";
 }
 
 const userSchema: Schema<User> = new Schema<User>({
@@ -29,6 +30,12 @@ const userSchema: Schema<User> = new Schema<User>({
     type: Boolean,
     default: false,
   },
+  role: {
+    type: String,
+    required: true,
+    default: "USER",
+    enum: ["USER", "ADMIN"],
+  },
   verificationToken: String,
   resetToken: String,
   resetTokenExpiration: Date,
@@ -39,6 +46,7 @@ export function validateUser(object: User): string | undefined {
     email: Joi.string().email().required(),
     name: Joi.string().required(),
     password: Joi.string().required(),
+    role: Joi.string().required(),
   }).validate(object);
 
   if (error) return error.details[0].message;

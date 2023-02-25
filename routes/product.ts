@@ -5,9 +5,24 @@ import { validateId } from "../model/common";
 const router = Router();
 
 router.get("/get-products", async (req: Request, res: Response) => {
-  const data = await Product.find().select("-createdAt -updatedAt -__v");
+  // const pageLimit: number = +req.query?.limit! || 10;
+  // const pageNumber: number = +req.query?.page! - 1 || 0;
+  const title: string = String(req.query.title || "");
 
-  res.json(data);
+  try {
+    const data = await Product.find({
+      title: { $regex: title, $options: "i" },
+    }).select("-__v");
+    // .skip(pageNumber * pageLimit)
+    // .limit(pageLimit)
+
+    const pageCount: number = data.length;
+    console.log(data, pageCount);
+
+    res.json({ data, pageCount });
+  } catch (error: any) {
+    res.json({ data: [], pageCount: 0 });
+  }
 });
 
 router.post("/get-by-id", async (req: Request, res: Response) => {
@@ -19,7 +34,7 @@ router.post("/get-by-id", async (req: Request, res: Response) => {
     });
   }
 
-  const data = await Product.findById(id).select("-createdAt -updatedAt -__v");
+  const data = await Product.findById(id).select("-__v");
   res.json({ error: false, data });
 });
 

@@ -15,14 +15,14 @@ router.post("/signup", async (req: Request, res: Response) => {
     return res.json({ error: true, message: errorMessage });
   }
 
-  let { name, email, password } = req.body;
+  let { name, email, password, role } = req.body;
 
   const salt: string = await bcrypt.genSalt(+process.env.SALTROUND!);
   password = await bcrypt.hash(password, salt);
 
   const verificationToken: string = crypto.randomBytes(128).toString("hex");
 
-  User.create({ name, email, password, verificationToken })
+  User.create({ name, email, password, verificationToken, role })
     .then(() => {
       const message = signupMessage(verificationToken);
       const mailData: MailData = {
@@ -46,9 +46,9 @@ router.post("/signup", async (req: Request, res: Response) => {
 });
 
 router.post("/login", async (req: Request, res: Response) => {
-  const { email, password } = req.body;
+  const { email, password, role } = req.body;
 
-  const user = await User.findOne({ email });
+  const user = await User.findOne({ email, role });
   if (!user) {
     return res.json({
       error: true,
@@ -78,8 +78,9 @@ router.post("/login", async (req: Request, res: Response) => {
 router.post("/verify-account/:token", async (req: Request, res: Response) => {
   try {
     const { token } = req.params;
+    const { role } = req.body;
 
-    const user = await User.findOne({ verificationToken: token });
+    const user = await User.findOne({ verificationToken: token, role });
 
     user!.verified = true;
     user!.verificationToken = undefined;
@@ -97,12 +98,12 @@ router.post("/verify-account/:token", async (req: Request, res: Response) => {
 });
 
 router.post("/reset-password", async (req: Request, res: Response) => {
-  const { email } = req.body;
+  const { email, role } = req.body;
 
   const resetToken: string = crypto.randomBytes(128).toString("hex");
 
   await User.findOneAndUpdate(
-    { email },
+    { email, role },
     { resetToken, resetTokenExpiration: new Date(Date.now() + 3600000) }
   );
 
@@ -120,7 +121,7 @@ router.post("/reset-password", async (req: Request, res: Response) => {
 router.post("/reset-password/:token", async (req: Request, res: Response) => {
   try {
     const { token } = req.params;
-    let { password } = req.body;
+    let { password, role } = req.body;
 
     if (!password) {
       return res.json({
@@ -135,6 +136,7 @@ router.post("/reset-password/:token", async (req: Request, res: Response) => {
     const user = await User.findOne({
       resetToken: token,
       resetTokenExpiration: { $gt: Date.now() },
+      role,
     });
 
     user!.password = password;
