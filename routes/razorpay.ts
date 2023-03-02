@@ -7,7 +7,7 @@ import { razorpayKeyId, razorpaySecret } from "../utils/config";
 const router = Router();
 
 const razorpay = new Razorpay({
-  key_id: razorpayKeyId,
+  key_id: razorpayKeyId!,
   key_secret: razorpaySecret,
 });
 
@@ -40,7 +40,7 @@ router.post("/create-order", async (req: Request, res: Response) => {
 
     const orderDetails: OrderDetails = {
       order_id: id,
-      totalAmount: amount / 100,
+      totalAmount: +amount / 100,
       currency,
     };
 

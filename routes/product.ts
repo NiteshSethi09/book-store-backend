@@ -17,7 +17,6 @@ router.get("/get-products", async (req: Request, res: Response) => {
     // .limit(pageLimit)
 
     const pageCount: number = data.length;
-    console.log(data, pageCount);
 
     res.json({ data, pageCount });
   } catch (error: any) {
@@ -45,14 +44,16 @@ router.post("/create", async (req: Request, res: Response) => {
     return res.json({ error: true, message: errorMessage });
   }
 
-  const { title, description, imageUrl, price, reviews, onSale, category } =
-    req.body;
-
-  if (await Product.findOne({ title })) {
-    return res
-      .status(400)
-      .json({ error: true, message: "Product already exists" });
-  }
+  const {
+    title,
+    description,
+    imageUrl,
+    price,
+    reviews,
+    onSale,
+    category,
+    role,
+  } = req.body;
 
   Product.create({
     title,
@@ -62,6 +63,7 @@ router.post("/create", async (req: Request, res: Response) => {
     reviews,
     onSale,
     category,
+    role,
   })
     .then(() => res.json({ error: false, message: "Product Created!" }))
     .catch((e) => res.json({ error: true, message: e.message }));

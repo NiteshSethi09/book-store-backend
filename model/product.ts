@@ -18,6 +18,7 @@ export interface Product {
   };
   onSale: boolean;
   category: string;
+  role: "USER" | "ADMIN";
 }
 
 const productSchema: Schema<Product> = new Schema<Product>(
@@ -49,6 +50,12 @@ const productSchema: Schema<Product> = new Schema<Product>(
       type: String,
       enum: Category,
     },
+    role: {
+      type: String,
+      required: true,
+      default: "USER",
+      enum: ["USER", "ADMIN"],
+    },
   },
   { timestamps: true }
 );
@@ -66,6 +73,7 @@ export function validateProduct(object: Product): string | undefined {
     category: Joi.string()
       .valid(...Category)
       .required(),
+    role: Joi.string().required(),
   }).validate(object);
 
   if (error) return error.details[0].message;
