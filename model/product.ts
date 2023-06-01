@@ -8,7 +8,7 @@ const Category: string[] = [
   "Career Development",
 ];
 
-export interface Product {
+export interface IProduct {
   title: string;
   imageUrl: string;
   description: string;
@@ -21,7 +21,7 @@ export interface Product {
   role: "USER" | "ADMIN";
 }
 
-const productSchema: Schema<Product> = new Schema<Product>(
+const productSchema: Schema<IProduct> = new Schema<IProduct>(
   {
     title: {
       type: String,
@@ -60,8 +60,8 @@ const productSchema: Schema<Product> = new Schema<Product>(
   { timestamps: true }
 );
 
-export function validateProduct(object: Product): string | undefined {
-  const { error } = Joi.object<Product>({
+export function validateProduct(object: IProduct): string | undefined {
+  const { error } = Joi.object<IProduct>({
     title: Joi.string().required(),
     description: Joi.string().required(),
     imageUrl: Joi.string().required(),
@@ -79,4 +79,4 @@ export function validateProduct(object: Product): string | undefined {
   if (error) return error.details[0].message;
 }
 
-export default model<Product>("Product", productSchema);
+export default model<IProduct>("Product", productSchema);

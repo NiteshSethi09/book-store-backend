@@ -5,22 +5,12 @@ import { validateId } from "../model/common";
 const router = Router();
 
 router.get("/get-products", async (req: Request, res: Response) => {
-  // const pageLimit: number = +req.query?.limit! || 10;
-  // const pageNumber: number = +req.query?.page! - 1 || 0;
-  const title: string = String(req.query.title || "");
-
   try {
-    const data = await Product.find({
-      title: { $regex: title, $options: "i" },
-    }).select("-__v");
-    // .skip(pageNumber * pageLimit)
-    // .limit(pageLimit)
+    const data = await Product.find().select("-__v");
 
-    const pageCount: number = data.length;
-
-    res.json({ data, pageCount });
+    res.json({ data });
   } catch (error: any) {
-    res.json({ data: [], pageCount: 0 });
+    res.status(500).json({ data: [] });
   }
 });
 
@@ -67,6 +57,29 @@ router.post("/create", async (req: Request, res: Response) => {
   })
     .then(() => res.json({ error: false, message: "Product Created!" }))
     .catch((e) => res.json({ error: true, message: e.message }));
+});
+
+router.patch("/update-by-id", (req: Request, res: Response) => {
+  const { _id, price, title, imageUrl, description, onSale, category } =
+    req.body;
+
+  if (!validateId(_id)) {
+    return res.status(400).json({ message: "Id must be in right format!" });
+  }
+  Product.findByIdAndUpdate(
+    _id,
+    {
+      price,
+      title,
+      imageUrl,
+      description,
+      onSale,
+      category,
+    },
+    { new: true }
+  )
+    .then((e) => res.json({ message: "Product updated successfully." }))
+    .catch((e) => res.status(400).json({ message: e.message }));
 });
 
 router.delete("/delete-by-id", (req: Request, res: Response) => {

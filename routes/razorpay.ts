@@ -1,7 +1,7 @@
 import { Request, Response, Router } from "express";
 import Razorpay from "razorpay";
 import Order, { Item, OrderDetails, validateOrder } from "../model/order";
-import { Product } from "../model/product";
+import { IProduct } from "../model/product";
 import { razorpayKeyId, razorpaySecret } from "../utils/config";
 
 const router = Router();
@@ -26,7 +26,7 @@ router.post("/create-order", async (req: Request, res: Response) => {
 
     let totalAmount: number = 0;
     (items as Item[]).forEach((item: Item) => {
-      const price = (item.product as Product).price.offerPrice;
+      const price = (item.product as IProduct).price.offerPrice;
       const quantyity = item.quantity;
       totalAmount += price * quantyity;
     });

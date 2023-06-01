@@ -8,6 +8,7 @@ import productRoutes from "./routes/product";
 import userRoutes from "./routes/user";
 import reviewRoutes from "./routes/review";
 import razorpayRoutes from "./routes/razorpay";
+import orderRoutes from "./routes/order";
 
 dotenv.config();
 const app = express();
@@ -24,6 +25,7 @@ app.use("/product", productRoutes);
 app.use("/user", userRoutes);
 app.use("/review", reviewRoutes);
 app.use("/razorpay", razorpayRoutes);
+app.use("/order", orderRoutes);
 
 mongoose.set("strictQuery", false);
 mongoose
