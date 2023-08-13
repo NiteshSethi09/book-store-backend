@@ -3,6 +3,7 @@ import Razorpay from "razorpay";
 import Order, { Item, OrderDetails, validateOrder } from "../model/order";
 import { IProduct } from "../model/product";
 import { razorpayKeyId, razorpaySecret } from "../utils/config";
+import { verifyAccessToken } from "../controllers/tokens";
 
 const router = Router();
 
@@ -11,49 +12,54 @@ const razorpay = new Razorpay({
   key_secret: razorpaySecret,
 });
 
-router.post("/create-order", async (req: Request, res: Response) => {
-  try {
-    const { items, user } = req.body;
-    const loginUser = {
-      userId: user._id,
-      name: user.name,
-    };
-    const errorMessage = validateOrder({ items, user: loginUser });
+router.post(
+  "/create-order",
+  verifyAccessToken,
+  async (req: Request, res: Response) => {
+    try {
+      const { items, user } = req.body;
 
-    if (errorMessage) {
-      return res.json({ error: true, message: errorMessage });
+      const loginUser = {
+        userId: user._id,
+        name: user.name,
+      };
+      const errorMessage = validateOrder({ items, user: loginUser });
+
+      if (errorMessage) {
+        return res.json({ error: true, message: errorMessage });
+      }
+
+      let totalAmount: number = 0;
+      (items as Item[]).forEach((item: Item) => {
+        const price = (item.product as IProduct).price.offerPrice;
+        const quantyity = item.quantity;
+        totalAmount += price * quantyity;
+      });
+
+      const data = await razorpay.orders.create({
+        amount: totalAmount * 100,
+        currency: "INR",
+      });
+
+      const { id, amount, currency } = data;
+
+      const orderDetails: OrderDetails = {
+        order_id: id,
+        totalAmount: +amount / 100,
+        currency,
+      };
+
+      Order.create({ items, user: loginUser, totalAmount, orderDetails })
+        .then(() => res.json({ error: false, data }))
+        .catch((e) => res.json({ error: true, message: e.message }));
+    } catch (error) {
+      res.json({
+        error: true,
+        message: "Some technical error occured while making an order!",
+      });
     }
-
-    let totalAmount: number = 0;
-    (items as Item[]).forEach((item: Item) => {
-      const price = (item.product as IProduct).price.offerPrice;
-      const quantyity = item.quantity;
-      totalAmount += price * quantyity;
-    });
-
-    const data = await razorpay.orders.create({
-      amount: totalAmount * 100,
-      currency: "INR",
-    });
-
-    const { id, amount, currency } = data;
-
-    const orderDetails: OrderDetails = {
-      order_id: id,
-      totalAmount: +amount / 100,
-      currency,
-    };
-
-    Order.create({ items, user: loginUser, totalAmount, orderDetails })
-      .then(() => res.json({ error: false, data }))
-      .catch((e) => res.json({ error: true, message: e.message }));
-  } catch (error) {
-    res.json({
-      error: true,
-      message: "Some technical error occured while making an order!",
-    });
   }
-});
+);
 
 router.post("/verify-payment", async (req: Request, res: Response) => {
   try {

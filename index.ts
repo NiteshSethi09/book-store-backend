@@ -17,6 +17,13 @@ app.use(express.urlencoded({ extended: false, limit: "5mb" }));
 app.use(express.json({ limit: "5mb" }));
 app.use(cors());
 
+app.use(function (req, res, next) {
+  const timeIn = performance.now();
+  next();
+  const timeOut = performance.now() - timeIn;
+  console.log(timeOut.toFixed(2));
+});
+
 app.get("/", (req: Request, res: Response) => {
   res.send("hello");
 });

@@ -1,10 +1,16 @@
 import { Request, Response, Router } from "express";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
+import { TokenExpiredError, verify } from "jsonwebtoken";
 
 import sendMail, { MailData } from "../utils/mail";
 import { resetPasswordMessage, signupMessage } from "../utils/messageConstants";
 import User, { validateUser } from "../model/user";
+import {
+  AccessToken,
+  signAccessToken,
+  signRefreshToken,
+} from "../controllers/tokens";
 
 const router = Router();
 
@@ -57,14 +63,25 @@ router.post("/login", async (req: Request, res: Response) => {
   }
 
   if (await bcrypt.compare(password, user.password)) {
+    const accessToken = signAccessToken({
+      name: user.name,
+      email: user.email,
+      id: user._id.toString(),
+      role,
+    });
+
+    const refreshToken = signRefreshToken({
+      name: user.name,
+      email: user.email,
+      id: user._id.toString(),
+      role,
+    });
+
     res.json({
       error: false,
-      message: "User found",
       user: {
-        _id: user._id,
-        name: user.name,
-        email: user.email,
-        verified: user.verified,
+        accessToken,
+        refreshToken,
       },
     });
   } else {
@@ -72,6 +89,35 @@ router.post("/login", async (req: Request, res: Response) => {
       error: true,
       message: "User not found. Please check the credentials.",
     });
+  }
+});
+
+router.get("/refresh", (req: Request, res: Response) => {
+  const refreshToken = req.headers.authorization;
+  const token = refreshToken?.split(" ");
+
+  try {
+    if (token && token?.length! > 1) {
+      const t = verify(token[1], "Hey_There") as AccessToken;
+
+      const accessToken = signAccessToken({
+        email: t.email,
+        id: t.id,
+        name: t.name,
+        role: t.role,
+      });
+      res.json({
+        error: false,
+        user: {
+          accessToken,
+          refreshToken: token[1],
+        },
+      });
+    }
+  } catch (error) {
+    if (error instanceof TokenExpiredError) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
   }
 });
 
