@@ -11,6 +11,9 @@ import {
   signAccessToken,
   signRefreshToken,
 } from "../controllers/tokens";
+import { JWTSecret } from "../utils/config";
+
+const secret = JWTSecret!;
 
 const router = Router();
 
@@ -98,7 +101,7 @@ router.get("/refresh", (req: Request, res: Response) => {
 
   try {
     if (token && token?.length! > 1) {
-      const t = verify(token[1], "Hey_There") as AccessToken;
+      const t = verify(token[1], secret) as AccessToken;
 
       const accessToken = signAccessToken({
         email: t.email,
