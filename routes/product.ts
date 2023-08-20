@@ -1,7 +1,6 @@
 import { Request, Response, Router } from "express";
 import Product, { validateProduct } from "../model/product";
 import { validateId } from "../model/common";
-import { verifyAccessToken } from "../controllers/tokens";
 
 const router = Router();
 
@@ -28,85 +27,75 @@ router.post("/get-by-id", async (req: Request, res: Response) => {
   res.json({ error: false, data });
 });
 
-router.post(
-  "/create",
-  verifyAccessToken,
-  async (req: Request, res: Response) => {
-    const errorMessage: string = validateProduct(req.body)!;
+router.post("/create", async (req: Request, res: Response) => {
+  const errorMessage: string = validateProduct(req.body)!;
 
-    if (errorMessage) {
-      return res.json({ error: true, message: errorMessage });
+  if (errorMessage) {
+    return res.json({ error: true, message: errorMessage });
+  }
+
+  const {
+    title,
+    description,
+    imageUrl,
+    price,
+    reviews,
+    onSale,
+    category,
+    role,
+  } = req.body;
+
+  Product.create({
+    title,
+    description,
+    imageUrl,
+    price,
+    reviews,
+    onSale,
+    category,
+    role,
+  })
+    .then(() => res.json({ error: false, message: "Product Created!" }))
+    .catch((e) => res.json({ error: true, message: e.message }));
+});
+
+router.patch("/update-by-id", async (req: Request, res: Response) => {
+  const { _id, price, title, imageUrl, description, onSale, category, role } =
+    req.body;
+
+  try {
+    const product = await Product.findOne({ _id, role });
+
+    if (!product) {
+      return res
+        .status(404)
+        .json({ message: "No product fetched fron database." });
     }
 
-    const {
-      title,
-      description,
-      imageUrl,
-      price,
-      reviews,
-      onSale,
-      category,
-      role,
-    } = req.body;
+    product.category = category;
+    product.price = price;
+    product.title = title;
+    product.imageUrl = imageUrl;
+    product.description = description;
+    product.onSale = onSale;
 
-    Product.create({
-      title,
-      description,
-      imageUrl,
-      price,
-      reviews,
-      onSale,
-      category,
-      role,
-    })
-      .then(() => res.json({ error: false, message: "Product Created!" }))
-      .catch((e) => res.json({ error: true, message: e.message }));
+    await product.save();
+    res.json({ message: "Product updated successfully." });
+  } catch (error) {
+    res.status(400).json({ message: (error as Error).message });
   }
-);
+});
 
-router.patch(
-  "/update-by-id",
-  verifyAccessToken,
-  async (req: Request, res: Response) => {
-    const { _id, price, title, imageUrl, description, onSale, category, role } =
-      req.body;
+router.delete("/delete-by-id", (req: Request, res: Response) => {
+  const { id } = req.body;
 
-    try {
-      const product = await Product.findOne({ _id, role });
-
-      if (!product) {
-        return res.json({ message: "No product fetched fron database." });
-      }
-
-      product.category = category;
-      product.price = price;
-      product.title = title;
-      product.imageUrl = imageUrl;
-      product.description = description;
-      product.onSale = onSale;
-
-      await product.save();
-      res.json({ message: "Product updated successfully." });
-    } catch (error) {
-      res.status(400).json({ message: (error as Error).message });
-    }
+  if (!validateId(id)) {
+    return res.json({ error: true, message: "Id must be in right format!" });
   }
-);
 
-router.delete(
-  "/delete-by-id",
-  verifyAccessToken,
-  (req: Request, res: Response) => {
-    const { id } = req.body;
-
-    if (!validateId(id)) {
-      return res.json({ error: true, message: "Id must be in right format!" });
-    }
-
-    Product.findByIdAndRemove(id)
-      .then(() => res.json({ error: false, message: "Product deleted." }))
-      .catch((e) => res.json({ error: true, message: e.message }));
-  }
-);
+  Product.findByIdAndRemove(id)
+    .then(() => res.json({ error: false, message: "Product deleted." }))
+    .catch((e) => res.json({ error: true, message: e.message }));
+});
 
 export default router;

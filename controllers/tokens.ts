@@ -1,5 +1,5 @@
 import { NextFunction, Request, Response } from "express";
-import { TokenExpiredError, sign, verify } from "jsonwebtoken";
+import { sign, verify } from "jsonwebtoken";
 import { JWTSecret } from "../utils/config";
 
 export interface AccessToken {
@@ -14,7 +14,7 @@ const secret = JWTSecret!;
 export const signAccessToken: (T: AccessToken) => string = (
   tokenPayload: AccessToken
 ) => {
-  const signedToken = sign(tokenPayload, secret, { expiresIn: "1m" });
+  const signedToken = sign(tokenPayload, secret, { expiresIn: "5m" });
   return signedToken;
 };
 
