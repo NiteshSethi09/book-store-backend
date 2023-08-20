@@ -1,7 +1,7 @@
 import { Request, Response, Router } from "express";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
-import { TokenExpiredError, verify } from "jsonwebtoken";
+import { verify } from "jsonwebtoken";
 
 import sendMail, { MailData } from "../utils/mail";
 import { resetPasswordMessage, signupMessage } from "../utils/messageConstants";
@@ -96,10 +96,10 @@ router.post("/login", async (req: Request, res: Response) => {
 });
 
 router.get("/refresh", (req: Request, res: Response) => {
-  const refreshToken = req.headers.authorization;
-  const token = refreshToken?.split(" ");
-
   try {
+    const refreshToken = req.headers.authorization;
+    const token = refreshToken?.split(" ");
+
     if (token && token?.length! > 1) {
       const t = verify(token[1], secret) as AccessToken;
 
@@ -118,9 +118,7 @@ router.get("/refresh", (req: Request, res: Response) => {
       });
     }
   } catch (error) {
-    if (error instanceof TokenExpiredError) {
-      return res.status(401).json({ message: "Unauthorized" });
-    }
+    res.status(401).json({ message: "Unauthorized" });
   }
 });
 

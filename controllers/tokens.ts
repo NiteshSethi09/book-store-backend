@@ -14,7 +14,7 @@ const secret = JWTSecret!;
 export const signAccessToken: (T: AccessToken) => string = (
   tokenPayload: AccessToken
 ) => {
-  const signedToken = sign(tokenPayload, secret, { expiresIn: "5m" });
+  const signedToken = sign(tokenPayload, secret, { expiresIn: "1m" });
   return signedToken;
 };
 
@@ -30,16 +30,14 @@ export const verifyAccessToken = (
   res: Response,
   next: NextFunction
 ) => {
-  const headerToken = req.headers.authorization;
-  const token = headerToken?.split(" ");
   try {
+    const headerToken = req.headers.authorization;
+    const token = headerToken?.split(" ");
     if (token && token?.length! > 1) {
       const t = verify(token[1], secret);
       next();
     }
   } catch (error) {
-    if (error instanceof TokenExpiredError) {
-      return res.status(401).json({ message: "Unauthorized" });
-    }
+    res.status(401).json({ message: "Unauthorized" });
   }
 };

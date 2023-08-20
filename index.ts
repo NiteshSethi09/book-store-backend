@@ -2,27 +2,30 @@ import express, { Request, Response } from "express";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 import cors from "cors";
+import { performance } from "perf_hooks";
 import { portNumber } from "./utils/config";
+import { logger } from "./utils/logger";
 
 import productRoutes from "./routes/product";
 import userRoutes from "./routes/user";
-import reviewRoutes from "./routes/review";
+import uploadRoutes from "./routes/common";
 import razorpayRoutes from "./routes/razorpay";
 import orderRoutes from "./routes/order";
-import { performance } from "perf_hooks";
 
 dotenv.config();
 const app = express();
 
-app.use(express.urlencoded({ extended: false, limit: "5mb" }));
-app.use(express.json({ limit: "5mb" }));
+app.use(express.urlencoded({ extended: false }));
+app.use(express.json());
 app.use(cors());
 
 app.use(function (req, res, next) {
   const timeIn = performance.now();
   next();
   const timeOut = performance.now() - timeIn;
-  console.log(timeOut.toFixed(2));
+  logger.info(
+    `requested URL: ${req.originalUrl} executed in ${timeOut.toFixed(2)} ms.`
+  );
 });
 
 app.get("/", (req: Request, res: Response) => {
@@ -31,7 +34,7 @@ app.get("/", (req: Request, res: Response) => {
 
 app.use("/product", productRoutes);
 app.use("/user", userRoutes);
-app.use("/review", reviewRoutes);
+app.use("/common", uploadRoutes);
 app.use("/razorpay", razorpayRoutes);
 app.use("/order", orderRoutes);
 
